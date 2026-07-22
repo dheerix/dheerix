@@ -36,8 +36,10 @@ The repository has three layers:
 
 1. **Knowledge**
    - career history
-   - projects
+   - project workspaces
    - architecture
+   - leadership
+   - research
    - technical decisions
    - engineering lessons
 
