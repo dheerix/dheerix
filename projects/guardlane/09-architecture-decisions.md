@@ -1,411 +1,309 @@
-# Architecture Decisions
+# Architecture Decisions (ADRs)
 
-# ADR-001: Replace Gemini with DistilBERT for Production Moderation
+This document captures the major architectural decisions that shaped Guardlane.
 
-**Status:** Accepted
+Each decision records:
 
-## Context
-
-The initial implementation of Guardlane focused on validating whether AI could reliably moderate marketplace conversations.
-
-A proof of concept using Google's Gemini demonstrated that Large Language Models could successfully classify vehicle discussions into moderation categories. The MVP was presented to Product together with evaluation metrics and validated the business concept.
-
-However, once the project transitioned from proof of concept to production design, it became clear that invoking an external LLM for every user interaction would not satisfy the operational requirements of the Question & Answer platform.
-
-The moderation workflow executes synchronously while buyers and sellers interact with the marketplace, making inference latency a critical product requirement.
-
-In addition, LLM inference introduced significantly higher operating costs and external API rate limits, both of which would become increasingly important as platform usage grew.
-
-The challenge therefore shifted from **"Can AI solve this problem?"** to **"How can AI solve this problem reliably at production scale?"**
+- Context
+- Decision
+- Rationale
+- Consequences
 
 ---
 
-## Decision
+# ADR-001: Hybrid Moderation Architecture
 
-Replace the Gemini-based moderation pipeline with a fine-tuned transformer model hosted internally on Amazon SageMaker.
+### Context
 
-After experimentation, DistilBERT was selected as the production model.
+No single moderation technique handled every production scenario efficiently.
 
----
+### Decision
 
-## Engineering Journey
+Build Guardlane as a hybrid moderation platform combining:
 
-### Phase 1 — Gemini MVP
+- Regex
+- DistilBERT
+- LLM fallback
 
-The project intentionally began with Gemini rather than immediately building a machine learning model.
+### Rationale
 
-The objective was to validate the moderation concept with Product as quickly as possible while measuring classification quality.
+Each engine solves a different class of problems.
 
-This reduced delivery risk and allowed moderation categories to evolve before investing in a production ML pipeline.
+- Regex → deterministic patterns
+- DistilBERT → English semantic moderation
+- LLM → unsupported languages
 
----
+### Consequences
 
-### Phase 2 — TensorFlow Prototype
+✅ Better latency
 
-The next experiment involved training a TensorFlow model from scratch.
+✅ Lower cost
 
-This decision was partly educational and partly technical.
+✅ Better specialization
 
-Drawing on previous university experience in image classification, the hypothesis was that a custom model could learn the marketplace-specific moderation patterns.
-
-However, experimentation quickly exposed two major limitations:
-
-- the available labelled dataset was too small and highly imbalanced
-- a model trained from scratch lacked the language understanding required for robust text classification
-
-The TensorFlow approach was abandoned on the first day of experimentation.
+⚠️ More orchestration complexity
 
 ---
 
-### Phase 3 — Transfer Learning
+# ADR-002: DistilBERT for English Moderation
 
-Rather than training language understanding from scratch, the project adopted transfer learning.
+### Context
 
-This approach reused language representations learned from large public corpora while fine-tuning only for Openlane's moderation policies.
+The English moderation taxonomy became stable and well labeled.
 
-This significantly reduced the amount of labelled data required while improving generalization.
+### Decision
 
----
+Use DistilBERT as the primary English semantic classifier.
 
-## Why DistilBERT?
+### Rationale
 
-DistilBERT was selected because it provided the best balance between production performance and operational efficiency.
+Compared with an LLM-first solution:
 
-Reasons included:
+- faster
+- cheaper
+- predictable output
+- measurable performance
 
-- lightweight transformer architecture
-- strong English language understanding
-- well-supported within the Hugging Face ecosystem
-- suitable for relatively short marketplace messages (typically fewer than 250 characters)
-- substantially lower inference latency than hosted LLMs
-- predictable operating cost
-- straightforward deployment to Amazon SageMaker
+### Consequences
 
----
+✅ Efficient inference
 
-## Alternatives Considered
+✅ Repeatable evaluation
 
-### Continue using Gemini
-
-**Pros**
-
-- Excellent classification capability
-- Minimal ML engineering effort
-- Ideal for rapid prototyping
-
-**Cons**
-
-- Higher latency
-- Higher inference cost
-- External API rate limits
-- Less predictable operational characteristics
+⚠️ Requires retraining when taxonomy evolves
 
 ---
 
-### Train TensorFlow Model from Scratch
+# ADR-003: Multi-Label Classification
 
-**Pros**
+### Context
 
-- Complete architectural control
-- Educational value
-- No dependency on pretrained models
-
-**Cons**
-
-- Poor language understanding
-- Limited training data
-- Inferior generalization
-- Longer experimentation cycle
-
----
-
-### DistilBERT
-
-**Pros**
-
-- Fast inference
-- Lower operational cost
-- Strong pretrained language representations
-- Production-ready deployment
-- Good balance of accuracy and efficiency
-
-**Cons**
-
-- English-focused model
-- Future multilingual support would require model replacement or extension
-
----
-
-## Trade-offs
-
-The project accepted increased ML engineering complexity in exchange for significantly lower production latency and operating cost.
-
-Additional work became necessary in:
-
-- dataset engineering
-- transfer learning
-- SageMaker deployment
-- model versioning
-- MLOps
-
-These investments enabled Guardlane to operate as a real-time moderation platform rather than a proof of concept.
-
----
-
-## Consequences
-
-This decision fundamentally changed the direction of the project.
-
-Instead of becoming an LLM integration project, Guardlane evolved into a complete production ML platform including:
-
-- dataset engineering
-- synthetic data generation
-- model training
-- MLOps
-- inference services
-- operational dashboards
-- production observability
-
----
-
-## Looking Back
-
-Given today's technology landscape, DistilBERT would likely not be selected again.
-
-The primary reason is multilingual expansion.
-
-The next generation of Guardlane is expected to support both English and French, requiring evaluation of newer multilingual transformer models while maintaining the same production latency objectives.
-
-However, given the constraints, tooling, and project goals at the time, DistilBERT represented an appropriate engineering decision.
-
-## Engineering Principle
-
-Validate business value before optimizing implementation.
-
-Prototype quickly to reduce uncertainty.
-
-Invest in production-grade architecture only after the business problem has been proven.
-
-# ADR-002: Adopt Multi-label Classification Instead of Multi-class Classification
-
-**Status:** Accepted
-
-## Context
-
-During the design of Guardlane, it became clear that marketplace conversations frequently expressed more than one moderation concern within the same message.
-
-The moderation categories represented independent business policies rather than mutually exclusive classes.
-
-Forcing each message into a single category would oversimplify the moderation outcome and reduce the quality of user feedback.
-
-## Decision
-
-Guardlane uses a multi-label classification model, allowing a single message to belong to multiple moderation categories simultaneously.
-
-Each moderation category is evaluated independently, and the final prediction may contain one or more policy violations.
-
-## Context from Real Marketplace Conversations
+Questions frequently violate multiple moderation categories.
 
 Example:
 
-> "Hey, 42000 for this is greedy."
+> "Call me. This dealer is a scam."
 
-This message simultaneously represents:
+### Decision
 
-- **Negative Semantic** — the seller is described using negative language.
-- **Negotiation** — the buyer is attempting to negotiate or criticize the asking price.
+Treat moderation as a multi-label problem.
 
-Both moderation policies are relevant.
+### Rationale
 
-Another example:
+Categories are independent.
 
-> "Call me at 519-xxx-xxxx. This dealer is a scam."
+### Consequences
 
-Possible labels:
+✅ Better representation of real behaviour
 
-- Contact Sharing
-- Dealer Targeting
-
-These are independent moderation concerns and should both be surfaced.
-
-## Alternatives Considered
-
-### Multi-class Classification
-
-Each message receives exactly one label.
-
-**Pros**
-
-- Simpler training
-- Simpler evaluation
-- Simpler inference
-
-**Cons**
-
-- Loses important moderation context
-- Cannot represent multiple simultaneous policy violations
-- Reduced explainability to users
+⚠️ Threshold tuning required per category
 
 ---
 
-### Multi-label Classification
+# ADR-004: Separate Prediction from Business Policy
 
-Each moderation category is predicted independently.
+### Context
 
-**Pros**
+Model predictions should not directly determine user-facing actions.
 
-- Matches real marketplace behaviour
-- Supports overlapping policy violations
-- Produces richer moderation insights
-- Easier to extend with future categories
+### Decision
 
-**Cons**
+Guardlane returns moderation evidence only.
 
-- More complex training and evaluation
-- Threshold tuning required for each category
+Marketplace Q&A decides:
 
-## Trade-offs
+- Allow
+- Warn
+- Block
 
-The project accepted additional model complexity because the moderation rules themselves were independent business policies rather than mutually exclusive outcomes.
+### Rationale
 
-This design more accurately represented real user behaviour and allowed moderation feedback to explain all detected issues instead of selecting only one.
+Separates AI from product policy.
 
-## Consequences
+### Consequences
 
-This decision influenced several downstream components:
+✅ Policy changes without retraining
 
-- Dataset labeling strategy
-- Model architecture
-- Evaluation metrics
-- API response format
-- Dashboard visualizations
-- Future category expansion
-
-The moderation service now returns a collection of detected policy violations rather than a single classification result.
-
-## Future Considerations
-
-As moderation policies evolve, new categories can be introduced without fundamentally changing the prediction model or API contract, making the system more adaptable to future business requirements.
-
-## Production Examples
-
-### Example 1
-
-**Message**
-
-> "Hey, $42,000 for this is greedy."
-
-**Detected Categories**
-
-- Negotiation
-
-**Reasoning**
-
-The message attempts to negotiate or criticize the listed price rather than requesting information about the vehicle. Guardlane identifies this as a negotiation attempt and discourages price discussions within the Q&A platform.
+✅ Cleaner ownership boundaries
 
 ---
 
-### Example 2
+# ADR-005: Language-Aware Routing
 
-**Message**
+### Context
 
-> "Call me at 519-555-1234. $42,000 is greedy."
+The classifier supports English only.
 
-**Detected Categories**
+### Decision
 
-- Contact Sharing
-- Negotiation
+Detect language before semantic moderation.
 
-**Reasoning**
+```text
+English
+    ↓
+DistilBERT
 
-The message contains two independent moderation concerns:
+Non-English
+    ↓
+LLM
+```
 
-- It attempts to move the conversation off-platform by sharing contact information.
-- It introduces price negotiation, which falls outside the intended purpose of the Q&A feature.
+### Rationale
 
-Both policies apply simultaneously, making this a multi-label prediction.
+Unsupported language is not equivalent to low confidence.
 
----
+### Consequences
 
-### Example 3
+✅ Better multilingual behaviour
 
-**Message**
-
-> "This dealer is a scam. Call me at 519-555-1234."
-
-**Detected Categories**
-
-- Dealer Targeting
-- Contact Sharing
-
-**Reasoning**
-
-The message attacks the seller while also encouraging communication outside the marketplace. Since these represent separate business policies, both labels are returned.
-
-## Engineering Principle
-
-Business policies are not always mutually exclusive.
-
-System design should model real-world behaviour rather than simplifying it for implementation convenience.
+⚠️ Requires routing logic
 
 ---
 
-# Future ADR Template
+# ADR-006: Unified Response Contract
 
-## ADR-XXX: Title
+### Context
 
-**Status:** Proposed | Accepted | Superseded | Rejected
+Consumers should not understand internal engine implementations.
 
-## Context
+### Decision
 
-Describe the business or engineering problem that required a decision.
+Normalize all engine outputs into one response contract.
 
----
+### Rationale
 
-## Decision
+Allows internal evolution without API changes.
 
-Describe the selected approach.
+### Consequences
 
----
+✅ Stable integrations
 
-## Engineering Journey _(Optional)_
-
-If the decision evolved through multiple experiments, capture the progression here.
+✅ Easier future expansion
 
 ---
 
-## Alternatives Considered
+# ADR-007: Asynchronous Persistence
 
-Explain the realistic alternatives and why they were not selected.
+### Context
 
----
+Operational records are valuable but should not increase buyer latency.
 
-## Trade-offs
+### Decision
 
-Describe the advantages and disadvantages accepted with this decision.
+Persist moderation events asynchronously.
 
----
+### Rationale
 
-## Consequences
+Separate operational concerns from request latency.
 
-Explain how this decision influenced the remainder of the project.
+### Consequences
 
----
+✅ Faster responses
 
-## Production Examples _(Optional)_
+✅ Rich operational history
 
-Provide representative examples that demonstrate why this decision was necessary.
-
----
-
-## Future Considerations
-
-Would this decision still be made today?
-
-If not, what would likely replace it?
+⚠️ Requires retry handling
 
 ---
 
-## Engineering Principle
+# ADR-008: Version Everything
 
-Capture the reusable lesson that applies beyond this specific project.
+### Context
+
+Models alone do not define runtime behaviour.
+
+### Decision
+
+Version:
+
+- model
+- thresholds
+- regex rules
+- taxonomy
+- routing
+- inference code
+
+### Rationale
+
+Production behaviour must be reproducible.
+
+### Consequences
+
+✅ Easier rollback
+
+✅ Better incident investigation
+
+---
+
+# ADR-009: Human Review Drives Improvement
+
+### Context
+
+Offline metrics alone cannot capture production quality.
+
+### Decision
+
+Persist moderation results for dashboard review.
+
+### Rationale
+
+Human validation provides the highest-quality feedback for future iterations.
+
+### Consequences
+
+✅ Continuous improvement
+
+✅ Better future datasets
+
+---
+
+# ADR-010: Guardlane as an Orchestrator
+
+### Context
+
+Marketplace should consume moderation, not individual AI services.
+
+### Decision
+
+Guardlane owns orchestration between:
+
+- regex
+- routing
+- classifier
+- LLM
+- aggregation
+
+### Rationale
+
+The orchestration layer becomes the stable product capability.
+
+### Consequences
+
+✅ Clear service boundary
+
+✅ Easier engine replacement
+
+✅ Supports future moderation engines
+
+---
+
+# Summary
+
+| Decision            | Why It Matters             |
+| ------------------- | -------------------------- |
+| Hybrid architecture | Best tool for each problem |
+| DistilBERT          | Fast English moderation    |
+| Multi-label         | Real-world moderation      |
+| Policy separation   | Clean ownership            |
+| Language routing    | Correct model selection    |
+| Unified contract    | Stable API                 |
+| Async persistence   | Lower latency              |
+| Version everything  | Safe deployments           |
+| Human review        | Continuous learning        |
+| Orchestrator        | Future-proof architecture  |
+
+---
+
+# Engineering Principle
+
+> Good architecture is not choosing one technology. It is assigning each responsibility to the component best suited to perform it while keeping the overall system simple, observable, and replaceable.

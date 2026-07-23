@@ -2,182 +2,446 @@
 
 ## Purpose
 
-This document defines the core business entities and their relationships within the Guardlane moderation platform.
+This document defines the core business and technical concepts used throughout Guardlane.
 
-The domain model establishes a shared vocabulary between Product, Engineering, and Data Science, ensuring that business concepts remain consistent across implementation, documentation, APIs, and machine learning models.
+The goal is to establish a shared language across Product, Engineering, Operations, and Machine Learning teams.
 
----
+The domain model is implementation-independent.
 
-## Domain Overview
-
-Guardlane moderates conversations exchanged between buyers and sellers on the Vehicle Detail Page before they become visible on the marketplace.
-
-The platform evaluates each submitted message against marketplace moderation policies and determines whether the message should be published.
+It describes _what the system represents_, not _how the code is written_.
 
 ---
 
-## Core Entities
+# Domain Overview
 
-### Buyer
-
-A marketplace user who submits questions about a vehicle.
-
-Responsibilities
-
-- Submit questions
-- Receive moderation feedback
-- Edit and resubmit messages
-
----
-
-### Seller
-
-Responds to buyer questions.
-
-Seller responses may also be moderated using the same policy framework.
-
----
-
-### Vehicle Listing
-
-Represents the auction listing to which conversations belong.
-
-A listing may contain multiple moderated conversations.
-
----
-
-### Conversation
-
-A logical thread between buyer and seller.
-
-Contains one or more moderated messages.
+```text
+Buyer
+   │
+   ▼
+Moderation Request
+   │
+   ▼
+Guardlane Moderation Orchestrator
+   │
+   ├── Language Detection
+   ├── Regex Detection
+   ├── Semantic Detection
+   │      ├── DistilBERT
+   │      └── LLM Fallback
+   │
+   ▼
+Detection Results
+   │
+   ▼
+Unified Moderation Result
+   │
+   ▼
+Marketplace Business Policy
+```
 
 ---
 
-### Message
+# Core Domain Concepts
 
-A single piece of text submitted by either participant.
+## Buyer Question
 
-Every message is independently evaluated before publication.
+A Buyer Question is the original marketplace message submitted by a buyer.
 
-Attributes
+Example:
 
-- Message ID
-- Conversation ID
-- Author
-- Timestamp
-- Text
-- Status
+> "Call me at 519-555-1234. I'll pay $2,000."
 
----
+The buyer question is immutable.
 
-### Moderation Request
-
-Represents a moderation evaluation.
-
-Created whenever a message is submitted.
-
-Contains
-
-- Message
-- Model Version
-- Request Time
+Every moderation decision refers back to the original text.
 
 ---
 
-### Moderation Category
+## Moderation Request
 
-Represents a business moderation policy.
+A Moderation Request represents one request submitted to Guardlane.
 
-Examples
+A request contains:
+
+- question text
+- identifiers
+- marketplace metadata
+- trace information
+
+A request is the unit processed by the moderation pipeline.
+
+---
+
+## Language
+
+Language represents the detected language of the request.
+
+Current conceptual values include:
+
+- English
+- Non-English
+
+Language is not itself a moderation category.
+
+It determines which semantic engine is capable of processing the request.
+
+---
+
+## Detection Engine
+
+A Detection Engine is any component capable of identifying moderation concerns.
+
+The current architecture includes three engine types.
+
+### Regex Engine
+
+Responsible for deterministic detection.
+
+Examples:
+
+- phone numbers
+- email addresses
+- URLs
+- configured patterns
+
+---
+
+### Semantic Classifier
+
+The English semantic classifier hosted on Amazon SageMaker.
+
+Responsibilities:
+
+- understand context
+- identify moderation intent
+- support multiple categories
+
+---
+
+### LLM Fallback
+
+Used when semantic classification falls outside the supported capability of the English classifier.
+
+Currently used for non-English moderation.
+
+The LLM returns categories aligned with the same moderation taxonomy.
+
+---
+
+## Moderation Category
+
+A Moderation Category represents a business-defined policy concern.
+
+Examples:
+
+- Contact Sharing
+- Dealer Targeting
+- Price Negotiation
+
+Categories belong to the business domain rather than the machine-learning domain.
+
+---
+
+## Detection Result
+
+A Detection Result represents the output produced by a single engine.
+
+Examples:
+
+Regex:
+
+```text
+Matched Rule:
+PhoneNumberRegex
+```
+
+Classifier:
+
+```text
+Contact Sharing
+0.97
+```
+
+LLM:
+
+```text
+Categories:
 
 - Contact Sharing
 - Negotiation
-- Dealer Targeting
-- Organization Targeting
-- Profanity
-- As-Is
-- Irrelevant
+```
+
+Detection Results remain engine-specific until normalized.
 
 ---
 
-### Prediction
+## Unified Moderation Result
 
-Represents the model's inference.
+The Unified Moderation Result is the canonical output returned by Guardlane.
 
-Contains
+It combines evidence from all applicable engines into one response.
 
-- Categories
-- Confidence Scores
-- Processing Time
-- Model Version
+Possible contents include:
 
----
+- flagged categories
+- confidence scores
+- matched regex rules
+- detected language
+- engine metadata
+- model version
+- rule version
 
-### Moderation Decision
-
-Final decision returned to the marketplace.
-
-Examples
-
-Published
-
-Blocked
-
-Requires User Revision
+Consumers should not need to understand which internal engine produced the result.
 
 ---
 
-### Dashboard Metric
+## Business Decision
 
-Aggregated operational statistics used by Product and Engineering.
+The Marketplace Q&A service converts moderation evidence into product behaviour.
 
-Examples
+Possible decisions include:
 
-- Moderation volume
-- Category distribution
-- Precision
-- False positives
-- False negatives
+- Allow
+- Warn
+- Block
+
+Business decisions are intentionally outside Guardlane.
 
 ---
 
-## Entity Relationships
+## Moderation Event
 
-Buyer
-↓
-Conversation
-↓
-Message
-↓
+A Moderation Event is the persisted operational record describing a moderation request and its outcome.
+
+Typical attributes include:
+
+- original question
+- language
+- regex matches
+- classifier output
+- LLM output
+- categories
+- timestamps
+- reviewer status
+- model version
+- rule version
+
+Moderation events support operations and future learning.
+
+---
+
+## Human Review
+
+Human Review represents manual validation of moderation results.
+
+Reviewers may:
+
+- accept
+- reject
+- correct categories
+
+Human review improves future datasets and evaluation quality.
+
+---
+
+# Relationships
+
+```text
+Buyer Question
+      │
+      ▼
 Moderation Request
-↓
-Prediction
-↓
-Moderation Decision
-
-↓
-
-Dashboard Metrics
+      │
+      ▼
+Language Detection
+      │
+      ▼
+Detection Engines
+      │
+      ├── Regex
+      ├── DistilBERT
+      └── LLM
+      │
+      ▼
+Detection Results
+      │
+      ▼
+Unified Moderation Result
+      │
+      ▼
+Marketplace Business Policy
+      │
+      ▼
+Moderation Event
+      │
+      ▼
+Human Review
+```
 
 ---
 
-## Ubiquitous Language
+# Bounded Contexts
 
-Throughout the project, the following terminology is used consistently.
+## Marketplace
 
-Message
+Owns:
 
-Prediction
+- buyer interaction
+- seller interaction
+- enforcement policy
 
-Moderation Category
+Does not own:
 
-Moderation Decision
+- inference
+- moderation models
 
-Conversation
+---
 
-Dashboard Metric
+## Guardlane
 
-Model Version
+Owns:
 
-Policy
+- orchestration
+- language routing
+- regex evaluation
+- semantic inference
+- result normalization
+- moderation contract
+
+Does not own:
+
+- business enforcement
+- marketplace UI
+
+---
+
+## Machine Learning
+
+Owns:
+
+- datasets
+- classifier training
+- thresholds
+- model releases
+- evaluation
+
+Does not own:
+
+- API contracts
+- routing decisions
+- business policy
+
+---
+
+## Operations
+
+Owns:
+
+- moderation review
+- dashboard workflows
+- production investigations
+- quality feedback
+
+Does not own:
+
+- model implementation
+- marketplace behaviour
+
+---
+
+# Domain Invariants
+
+The following rules should always remain true.
+
+## One Request
+
+One buyer question produces one moderation request.
+
+---
+
+## One Contract
+
+Every request returns one unified moderation result regardless of which engines participated.
+
+---
+
+## Categories Are Independent
+
+Multiple moderation categories may be returned.
+
+Categories are never mutually exclusive by default.
+
+---
+
+## Detection Engines Are Replaceable
+
+The external moderation contract should remain stable if an internal engine changes.
+
+Examples:
+
+- replace DistilBERT
+- introduce multilingual classifiers
+- replace the LLM provider
+- add another rule engine
+
+---
+
+## Prediction Is Not Enforcement
+
+Guardlane identifies moderation concerns.
+
+Marketplace Q&A determines user-facing behaviour.
+
+---
+
+## Human Feedback Improves the System
+
+Operational review contributes to future model evaluation and training.
+
+---
+
+# Ubiquitous Language
+
+| Term                      | Meaning                                       |
+| ------------------------- | --------------------------------------------- |
+| Buyer Question            | Original marketplace message                  |
+| Moderation Request        | Request entering Guardlane                    |
+| Language                  | Detected processing language                  |
+| Detection Engine          | Component that identifies moderation concerns |
+| Regex Engine              | Deterministic pattern detector                |
+| Semantic Classifier       | English DistilBERT model hosted on SageMaker  |
+| LLM Fallback              | Semantic moderation for unsupported languages |
+| Detection Result          | Output from one engine                        |
+| Unified Moderation Result | Canonical Guardlane response                  |
+| Moderation Category       | Business-defined policy classification        |
+| Business Decision         | Allow, Warn, or Block                         |
+| Moderation Event          | Persisted operational record                  |
+| Human Review              | Manual validation of moderation outcomes      |
+
+---
+
+# Engineering Principles
+
+## Model the business, not the implementation
+
+The domain should remain valid even if the underlying models change.
+
+---
+
+## One language across teams
+
+Product, Engineering, Operations, and Machine Learning should describe the system using the same concepts.
+
+---
+
+## Separate evidence from action
+
+Detection engines provide evidence.
+
+Marketplace services decide how users experience that evidence.
+
+---
+
+## Hide orchestration behind a stable contract
+
+Internal routing, models, and rule engines may evolve, but consumers should continue to interact with one consistent Guardlane interface.
