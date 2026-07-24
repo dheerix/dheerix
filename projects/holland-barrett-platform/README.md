@@ -2,76 +2,83 @@
 
 ## Enterprise Commerce Search Engineering
 
-> A deep dive into building and evolving enterprise-scale commerce search platforms, product discovery systems, promotion engines, and modern search architecture.
+> A project-specific knowledge base for the Holland & Barrett commerce platform, focused on business context, platform architecture, engineering decisions, production operations, and interview-ready evidence.
 
 ---
 
 # Repository Purpose
 
-This repository documents the architecture, engineering decisions, production learnings, and business context behind a modern enterprise commerce platform.
+This repository documents the Holland & Barrett commerce platform as a production system and as an interview/promotion knowledge source.
 
-Rather than documenting a single project, it explains the engineering principles required to build and operate large-scale e-commerce search systems.
+The goal is to keep the business context, architecture, operating lessons, and engineering impact in distinct documents so each topic can be reused without duplication.
 
-Topics include:
+Use the following layers:
 
-- Enterprise Commerce
-- Product Discovery
-- Search Engineering
-- Elasticsearch
-- OneSearch
-- Promotion Engines
-- Domain Specific Languages (ANTLR)
-- Production Engineering
-- Search Relevance
-- Legacy Modernization
+- [01 Business Context](./01-business-context.md) for the stable business problem, stakeholders, customer journey, and commercial constraints
+- [02 Platform Overview](./02-platform-overview.md) for the system shape and major components
+- [03 Search Platform](./03-search-platform.md) for search-specific implementation details
+- [04 Architecture](./04-architecture.md) for end-to-end technical structure
+- [05 Engineering Decisions](./05-engineering-decisions.md) for trade-offs and alternatives
+- [06 Production Engineering](./06-production-engineering.md) for runtime operations and reliability
+- [07 Engineering Impact](./07-engineering-impact.md) for personal contributions and outcomes
+- [08 Interview Guide](./08-interview-guide.md) for story mapping and interview preparation
+- [09 Platform Glossary](./09-platform-glossary.md) for terminology
+- [10 Platform Timeline](./10-platform-timeline.md) for evolution over time
 
 ---
 
-# Business Context
+# What This Repository Is For
 
-A modern commerce platform is far more than a shopping website.
+This repository should help answer four questions:
 
-Customers expect to:
+- What business problem did the platform solve?
+- How did the platform work?
+- Why were key engineering decisions made?
+- What evidence supports the story for resumes, interviews, and promotion packets?
 
-- find products instantly
-- filter millions of products
-- receive relevant recommendations
-- discover promotions
-- navigate categories effortlessly
+---
 
-Search directly impacts:
+# Scope
 
-- Revenue
-- Customer Satisfaction
-- Conversion Rate
-- Product Discoverability
+This repository is intentionally centered on the online commerce experience.
 
-Poor search means lost customers.
+The platform needed to support:
+
+- product discovery
+- search relevance
+- browsing and navigation
+- promotions
+- production reliability
+- platform evolution
+
+Broader engineering principles live in [docs/principles.md](../docs/principles.md) and should not be restated here unless they are specific to this platform.
 
 ---
 
 # Platform Overview
 
-                    Customer
-                         │
-                React Storefront
-                         │
-         ┌───────────────┴──────────────┐
-         │                              │
-         ▼                              ▼
-
-Marketing Content Product Search
-(CMS Team) (OneSearch)
+```text
+Customer
 │
 ▼
-Elasticsearch
+React Storefront
 │
-▼
-Commerce Backend Services
-│
-┌──────────────┬──────────────┐
-▼ ▼ ▼
-Catalog Pricing Inventory
+├───────────────┬───────────────┐
+│               │               │
+▼               ▼               ▼
+Marketing Content  Product Search  Browse / Navigation
+      │               │
+      └───────┬───────┘
+              ▼
+         Elasticsearch
+              │
+              ▼
+      Commerce Backend Services
+              │
+      ┌───────┼────────┬────────┐
+      ▼       ▼        ▼        ▼
+   Catalog  Pricing  Inventory  Promotions
+```
 
 ---
 
@@ -122,69 +129,24 @@ Primary ownership areas included:
 - Production issue investigation
 - Legacy search modernization
 
-This repository focuses on those systems while also explaining how they fit into the larger commerce platform.
+These responsibilities are expanded in the technical sections, with outcomes and evidence captured in [07 Engineering Impact](./07-engineering-impact.md) and [08 Interview Guide](./08-interview-guide.md).
 
 ---
 
 # Repository Structure
 
-01 Business Context
+The numbered documents follow the same progression as the system itself:
 
-Understanding enterprise retail.
-
----
-
-02 Platform Overview
-
-High-level architecture.
-
----
-
-03 Search Platform
-
-OneSearch architecture and Elasticsearch.
-
----
-
-04 Architecture
-
-End-to-end commerce architecture.
-
----
-
-05 Engineering Decisions
-
-Major design decisions and trade-offs.
-
----
-
-06 Production Engineering
-
-Operating search in production.
-
----
-
-07 Engineering Impact
-
-My contributions and lessons learned.
-
----
-
-08 Interview Guide
-
-Engineering stories and interview preparation.
-
----
-
-09 Platform Glossary
-
-Commerce and search terminology.
-
----
-
-10 Platform Timeline
-
-Evolution of the platform.
+1. Business context
+1. Platform overview
+1. Search platform
+1. Architecture
+1. Engineering decisions
+1. Production engineering
+1. Engineering impact
+1. Interview guide
+1. Glossary
+1. Timeline
 
 ---
 
@@ -218,6 +180,13 @@ After completing this repository, the reader should understand:
 ---
 
 # Guiding Philosophy
+
+This repository should make it easy to:
+
+- extract targeted resume bullets
+- answer interview questions from evidence
+- explain technical decisions without repeating yourself
+- trace a story from business context to production outcome
 
 Technology should serve business outcomes.
 

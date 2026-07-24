@@ -1,5 +1,7 @@
 # Dheerix Engineering Principles
 
+> This document defines repository-wide policy. Project files should reference these principles rather than restating them.
+
 ## 1. Single Source of Truth
 
 Every engineering concept is documented once and referenced elsewhere.
@@ -39,3 +41,7 @@ Documents evolve with new knowledge, just like production software.
 ## 10. Long-Term Thinking
 
 Dheerix is intended to remain valuable throughout an engineering career.
+
+## 11. Right Level of Detail
+
+Keep stable context in the relevant domain file, technical detail in the system or project file, and reusable guidance in the shared docs.

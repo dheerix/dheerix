@@ -1,147 +1,121 @@
 # 01 - Business Context
 
-# Enterprise Commerce Search
+## Enterprise Commerce Search
 
-Understanding the Business Before the Technology
-
----
-
-# Why This Matters
-
-Software exists to solve business problems.
-
-Before understanding Elasticsearch, APIs, or React, an engineer must first understand what problem the business is trying to solve.
-
-Every architecture decision in a commerce platform ultimately exists to help a customer discover, evaluate, and purchase products.
-
-Technology is the implementation.
-
-Business is the reason.
+### Holland & Barrett Platform
 
 ---
 
-# About Holland & Barrett
+# Purpose
 
-Holland & Barrett is one of Europe's largest health and wellness retailers.
+This document captures the business problem behind the Holland & Barrett commerce platform.
 
-The company offers thousands of products across categories including:
+It exists to answer a simple question:
+
+what customer and business outcomes was the search platform meant to improve?
+
+Technical details belong in the architecture and engineering documents.
+
+---
+
+# Business Problem
+
+The online commerce experience needed to help customers quickly discover, compare, and purchase health and wellness products.
+
+The core business challenge was not just showing products.
+
+It was making the right products easy to find in a large, changing catalog with search, browse, filtering, and promotions all working together.
+
+---
+
+# Company Context
+
+Holland & Barrett is a large health and wellness retailer with a broad product catalog that includes:
 
 - Vitamins
 - Supplements
-- Sports Nutrition
-- Organic Foods
-- Herbal Products
+- Sports nutrition
+- Organic foods
+- Herbal products
 - Beauty
-- Personal Care
-- Healthy Living
+- Personal care
+- Healthy living products
 
-Customers can purchase products through:
+Customers shop through multiple channels:
 
-- Physical Stores
+- Physical stores
 - Website
-- Mobile Devices
+- Mobile devices
 
-This repository focuses on the digital commerce platform powering the online customer experience.
+This repository focuses on the digital commerce experience and the systems that support online discovery and conversion.
 
 ---
 
-# The Customer Journey
+# Primary Stakeholders
 
-Every online purchase follows a journey.
+The platform served several groups with different goals:
 
-```
+- Customers who wanted fast, relevant product discovery
+- Merchandising teams who needed promotions and campaign visibility
+- Product and content teams who maintained catalog and browsing experiences
+- Engineers who needed a stable, evolvable platform
+- Business stakeholders who cared about conversion, revenue, and customer satisfaction
+
+---
+
+# Customer Journey
+
+The search platform influenced the full purchase path:
+
+```text
 Customer
-
 ↓
-
-Visits Website
-
+Visits website
 ↓
-
-Looks for Product
-
+Searches or browses
 ↓
-
-Searches or Browses
-
+Filters and compares results
 ↓
-
-Filters Results
-
+Reads product details
 ↓
-
-Reads Product Details
-
+Adds to basket
 ↓
-
-Adds to Basket
-
+Checks out
 ↓
-
-Checkout
-
-↓
-
-Order
+Places order
 ```
 
-Every second saved during this journey increases the likelihood of conversion.
+Each step in this journey is a conversion opportunity.
+
+Reducing friction at the discovery stage has a direct effect on downstream revenue.
 
 ---
 
-# Why Search Is So Important
+# Why Search Matters
 
-Imagine a customer searching for
-
-```
-Vitamin D
-```
-
-The customer expects:
+A customer searching for `Vitamin D` expects:
 
 - Instant results
 - Relevant products
-- Correct spelling handling
+- Spelling tolerance
 - Filters
 - Prices
 - Availability
 - Promotions
 
-The customer does **not** care how Elasticsearch works.
+The customer does not care how the search engine works.
 
-They care that the correct product appears immediately.
+They care that the right product appears quickly and confidently.
 
-Search is therefore one of the highest-value systems in any commerce platform.
-
----
-
-# Search Is Revenue
-
-Unlike many backend systems, search directly impacts business revenue.
-
-Better search leads to:
-
-- Higher conversion rates
-- Better product discovery
-- Increased basket size
-- Lower customer frustration
-- Higher repeat purchases
-
-Poor search has the opposite effect.
-
-Customers rarely complain.
-
-They simply leave.
+Search is therefore a revenue-critical capability, not just a technical feature.
 
 ---
 
-# The Scale Problem
+# Scale And Complexity
 
-Enterprise retailers manage enormous catalogs.
+The commerce catalog introduces recurring challenges:
 
-Typical challenges include:
-
-- Thousands of products
+- Large product volume
 - Multiple brands
 - Constant inventory changes
 - Product variants
@@ -150,179 +124,57 @@ Typical challenges include:
 - Synonyms
 - Misspellings
 
-Finding the correct product becomes an engineering problem.
+This is why discovery becomes an engineering problem.
+
+The hard part is not storing products.
+
+The hard part is helping customers find the right product at the right time.
 
 ---
 
-# Product Discovery
+# Discovery Modes
 
-Customers do not always know exactly what they want.
+Customers do not always arrive with a precise query.
 
-Some searches are precise.
+Examples include:
 
-```
-Vitamin D3 5000 IU
-```
+- Exact intent: `Vitamin D3 5000 IU`
+- Broad intent: `Energy`
+- Problem-based intent: `Joint pain`
 
-Others are vague.
+The platform had to translate intent into relevant products through both search and browse experiences.
 
-```
-Energy
-```
+Navigation and search worked together:
 
-Others describe a problem.
-
-```
-Joint pain
-```
-
-The search platform must translate customer intent into relevant products.
-
-This is called **product discovery**.
-
----
-
-# Beyond Search
-
-Customers also discover products by browsing.
-
-```
+```text
 Health
-
 ↓
-
 Vitamins
-
 ↓
-
 Immune Support
-
 ↓
-
 Vitamin C
 ```
-
-Navigation and search work together to help customers explore the catalog.
 
 ---
 
 # Promotions
 
-Commerce platforms are not static catalogs.
+Commerce platforms are dynamic.
 
-Marketing teams constantly launch campaigns.
+Marketing teams regularly launch offers such as:
 
-Examples include:
+- Buy one get one
+- Percentage discounts
+- Basket threshold offers
+- Member discounts
 
-- Buy One Get One
-- 20% Off
-- Spend £50 Save £10
-- Member Discounts
-- Seasonal Promotions
+Promotions affected search relevance, browsing, product detail pages, and conversion.
 
-These promotions involve complex business rules that must be evaluated consistently across the platform.
-
----
-
-# Merchandising
-
-Not every product is ranked solely by text relevance.
-
-Business teams may choose to:
-
-- Promote new products
-- Boost seasonal items
-- Hide discontinued products
-- Prioritize higher-margin products
-- Highlight exclusive brands
-
-Search therefore balances customer relevance with business objectives.
+That made them a core part of the business context, not an isolated merchandising concern.
 
 ---
 
-# Search Quality
+# Read Before Merge
 
-A successful search engine should answer three questions.
-
-## Can the customer find it?
-
-Product discoverability.
-
----
-
-## Can the customer trust it?
-
-Relevant ranking.
-
-Correct pricing.
-
-Correct availability.
-
----
-
-## Can the customer buy it?
-
-Reliable commerce workflows.
-
-Fast checkout.
-
----
-
-# Modern Commerce Architecture
-
-Large commerce platforms separate responsibilities.
-
-```
-Presentation
-
-↓
-
-Search
-
-↓
-
-Commerce
-
-↓
-
-Catalog
-
-↓
-
-Inventory
-
-↓
-
-Pricing
-```
-
-Each layer evolves independently while working together to create a seamless shopping experience.
-
----
-
-# Engineering Challenges
-
-Building enterprise commerce platforms requires solving problems such as:
-
-- Fast product search
-- Search relevance
-- Large catalog indexing
-- High traffic
-- Promotions
-- Business rules
-- Low latency
-- Scalability
-- Reliability
-- Continuous deployment
-
-The following chapters explore how these challenges are addressed through modern search architecture.
-
----
-
-# Key Takeaways
-
-- Commerce platforms exist to help customers discover and purchase products.
-- Search is one of the most business-critical systems in e-commerce.
-- Product discovery combines search, navigation, merchandising, and promotions.
-- Engineering decisions should always be driven by customer and business outcomes.
-- Understanding the business problem is the foundation for designing effective technical solutions.
+> Use this document for the stable business context only. Keep architecture, implementation, and operating detail in the project-specific technical documents.

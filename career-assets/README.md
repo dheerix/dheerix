@@ -2,7 +2,11 @@
 
 ## Sections
 
-- Master Resume
+- Master Resume Repository
+- Canonical Master Resume
+- General Resume
+- Executive Resume
+- Targeted Resumes
 - AI Platform Resume
 - Platform Engineer Resume
 - Commerce/Search Resume
@@ -14,4 +18,3 @@
 - Interview Kit
 - Promotion Package
 - Speaking/Media Kit
-
