@@ -2,31 +2,20 @@
 
 ## Canonical Structure
 
-- `master-resume.md` - canonical career document
-- `general-resume.md` - default 2-page resume for broad applications
-- `executive-resume.md` - leadership and promotion-oriented resume
-- `targeted-resumes/` - role-specific resume variants
+- `01_MASTER_RESUME.md` - canonical career document
+- `02_GENERAL_RESUME.md` - default 2-page resume for broad applications
+- `03_AI_ENGINEER_RESUME.md` - AI and GenAI specialization
+- `04_PLATFORM_ENGINEER_RESUME.md` - backend, cloud, and distributed systems specialization
+- `05_FULLSTACK_ENGINEER_RESUME.md` - product and full-stack specialization
+- `06_STAFF_ENGINEER_RESUME.md` - senior IC and technical leadership specialization
+- `07_EXECUTIVE_RESUME.md` - leadership and promotion-oriented resume
 
 ---
 
 ## Notes
 
-The canonical master resume file is lowercase here because this repository already contains a `resumes/` tree with existing file naming conventions.
-
 This directory is the output layer of the resume ecosystem.
 
 The source layer lives in `../master-resume/`, and the broader identity layer lives in `../master-profile/`.
 
----
-
-## Legacy Files
-
-The following existing files remain available during migration:
-
-- `ai-platform-resume.md`
-- `backend-platform-resume.md`
-- `commerce-search-resume.md`
-- `healthcare-verily-resume.md`
-- `master-resume.md`
-
-These can be remapped to the v1 naming scheme over time without changing the source layer.
+These seven files are the frozen resume set for v1.

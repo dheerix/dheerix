@@ -4,7 +4,7 @@
 
 This repository is the source layer for the resume ecosystem.
 
-It captures the durable career material that feeds the canonical resume output in [../resumes/master-resume.md](../resumes/master-resume.md).
+It captures the durable career material that feeds the canonical resume output in [../resumes/01_MASTER_RESUME.md](../resumes/01_MASTER_RESUME.md).
 
 The modular sections in this directory are intentionally comprehensive so derived resumes can stay selective without losing fidelity.
 

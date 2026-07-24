@@ -1,4 +1,4 @@
-# Master Resume
+# 01_MASTER_RESUME
 
 > Canonical career document for resume generation, interview preparation, and promotion materials.
 

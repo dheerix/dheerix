@@ -6,4 +6,4 @@
 
 # Source
 
-This asset is derived from [../resumes/master-resume.md](../resumes/master-resume.md).
+This asset is derived from [../resumes/01_MASTER_RESUME.md](../resumes/01_MASTER_RESUME.md).
