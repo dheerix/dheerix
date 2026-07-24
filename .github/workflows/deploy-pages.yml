@@ -3,9 +3,6 @@ name: Deploy portfolio to GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - portfolio/dheerix/**
-      - .github/workflows/deploy-pages.yml
   workflow_dispatch:
 
 permissions:
