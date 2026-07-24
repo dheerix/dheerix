@@ -8,7 +8,7 @@
 - `04_PLATFORM_ENGINEER_RESUME.md` - backend, cloud, and distributed systems specialization
 - `05_FULLSTACK_ENGINEER_RESUME.md` - product and full-stack specialization
 - `06_STAFF_ENGINEER_RESUME.md` - senior IC and technical leadership specialization
-- `07_EXECUTIVE_RESUME.md` - leadership and promotion-oriented resume
+- `07_TECHNICAL_LEADER_RESUME.md` - technology strategy and organizational impact resume
 
 ---
 
