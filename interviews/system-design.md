@@ -233,6 +233,61 @@ Design the user and account-management platform for a collaborative research env
 - cross-tenant identifier leaks data
 - retry duplicates a provisioning operation
 
+### Reference Answer
+
+Start with the access model:
+
+```text
+Identity Provider
+      ↓
+Authentication Gateway
+      ↓
+Session / Token Service
+      ↓
+Workbench API Gateway
+      ↓
+Policy Enforcement Point
+      ↓
+Application Services
+```
+
+Maintain users, organizations, workspaces, groups, roles, memberships, and access requests in an authoritative account service backed by a relational database. The relational model supports uniqueness, membership constraints, transactions, and auditable state changes.
+
+Use OIDC for interactive authentication and support enterprise federation through the identity provider. Keep authentication separate from authorization.
+
+For authorization:
+
+```text
+Request identity and resource
+      ↓
+Policy Enforcement Point
+      ↓
+Policy Decision Service
+      ↓
+Role + membership + contextual attributes
+      ↓
+Permit / deny + policy reason
+```
+
+Use RBAC for stable permissions and ABAC conditions for organization, workspace, region, data sensitivity, and access expiry. Default to deny.
+
+Use short-lived access tokens. Treat token claims as identity context, not as indefinitely authoritative authorization. High-risk operations should evaluate current membership and policy.
+
+Publish membership and role changes through an outbox-backed event stream so downstream caches and provisioning systems receive changes reliably. Consumers must be idempotent. Access revocation events receive high priority, and authorization caches use a short TTL.
+
+Every privileged operation produces an append-only audit event containing actor, action, resource, policy result, authenticated context, timestamp, and correlation identifier. Keep PHI and secrets out of the event payload.
+
+Availability strategy:
+
+- authentication-provider outage: existing short-lived sessions may continue according to risk policy; new login fails clearly
+- policy service outage: fail closed for sensitive operations
+- audit sink outage: persist through an outbox or durable queue; do not silently discard events
+- provisioning failure: retry idempotently and expose pending state
+
+Primary trade-off:
+
+> Synchronous authorization provides faster revocation and stronger consistency, while cached decisions reduce latency and dependency load. Use risk-tiered evaluation rather than one policy for every operation.
+
 ## Verily Design 2 — Precision-Health Data Platform
 
 ### Prompt
@@ -269,6 +324,60 @@ Design a platform that ingests clinical, device, and research data and makes gov
 - incorrect patient or subject linkage
 - transformation-version drift
 - unauthorized dataset access
+
+### Reference Answer
+
+Use separate raw, validated, and curated zones:
+
+```text
+Clinical / Device / Research Sources
+        ↓
+Source Connectors
+        ↓
+Immutable Raw Storage
+        ↓
+Validation and Quarantine
+        ↓
+Normalization / FHIR Mapping
+        ↓
+Curated Analytical Store
+        ↓
+Governed Research Workspaces
+```
+
+Every ingestion receives a source identifier, ingestion identifier, event or file checksum, schema version, and processing timestamp. Store the original payload immutably so transformations can be reproduced.
+
+Validate structure first, then domain rules. Invalid records move to quarantine with a reason and lineage reference; they do not disappear from the pipeline.
+
+Use idempotency keys or source-version checks so replay does not duplicate logical records. Preserve late-arriving corrections and distinguish event time from processing time.
+
+Normalize to a clinically informed model, using FHIR resources where appropriate, while retaining links to source records. Do not discard source fidelity merely to make every input look canonical.
+
+Store transformation code and configuration by version. Every curated record should be traceable to:
+
+- source
+- ingestion
+- validation result
+- transformation version
+- identity or subject-linkage decision
+
+Use batch processing when data is delivered in bounded files or latency requirements are measured in hours. Use streaming only for workflows that need rapid activation. A Beam-style model can unify both, but operational simplicity still matters.
+
+Govern access through organizations, datasets, purposes, workspaces, and expiry. De-identification should be a controlled transformation, not a promise that all risk has disappeared.
+
+Quality metrics include:
+
+- rejected-record rate
+- missing critical fields
+- duplicate rate
+- transformation failures
+- late-data volume
+- source-to-curated latency
+- reconciliation mismatch
+
+Primary trade-off:
+
+> Making data available quickly helps researchers, but releasing insufficiently validated or poorly governed data creates scientific and privacy risk. Publish explicit quality states instead of pretending every dataset is equally ready.
 
 ## Verily Design 3 — Developer Platform
 
@@ -321,6 +430,72 @@ Design a cloud-native developer platform that supports the end-to-end software l
 - credentials leak through pipelines
 - shared cluster failure creates broad impact
 
+### Reference Answer
+
+Treat the platform as a product with a control plane and paved delivery paths:
+
+```text
+Backstage Portal and Service Catalog
+        ↓
+Versioned Service Templates
+        ↓
+Repository + Ownership Metadata
+        ↓
+GitHub Actions CI
+        ↓
+Artifact and Image Registry
+        ↓
+Terraform Environment Provisioning
+        ↓
+GitOps Configuration Repository
+        ↓
+ArgoCD
+        ↓
+Kubernetes Runtime
+```
+
+The developer portal provides discovery and self-service actions. The catalog records ownership, lifecycle, dependencies, documentation, and operational links.
+
+Templates create repositories with:
+
+- build and test pipeline
+- security scanning
+- container configuration
+- deployment manifests
+- observability defaults
+- ownership metadata
+- runbook skeleton
+
+Keep templates versioned. Do not silently force every existing service to change when a template evolves. Provide upgrade automation and publish compatibility and deprecation policies.
+
+CI validates code, tests, dependencies, images, and configuration. CI publishes immutable artifacts. CD promotes references to those artifacts through Git, and ArgoCD reconciles the desired state.
+
+Terraform modules provide reviewed infrastructure capabilities. Teams consume modules through constrained interfaces rather than copying implementation. Use remote state, locking, least-privilege execution identities, plan review, and policy checks.
+
+Use platform APIs for workflows that cannot be expressed safely through templates alone. Avoid turning the portal into a thin collection of links.
+
+Reliability boundaries:
+
+- isolate platform control-plane failure from already running workloads
+- use multiple deployment environments
+- limit cluster and tenant blast radius
+- canary new templates and module versions
+- retain manual recovery paths
+- monitor reconciliation, queue depth, pipeline duration, and platform API availability
+
+Success is measured by developer outcomes:
+
+- service creation time
+- lead time
+- deployment frequency
+- change-failure rate
+- time to restore
+- adoption and support burden
+
+Primary trade-off:
+
+> A golden path increases safety and speed for common workloads, but a mandatory path can become a bottleneck. Provide supported extension points and make exceptions visible rather than forcing teams into hidden workarounds.
+
 ## Verily Design 4 — Microfrontend Platform
 
 ### Prompt
@@ -354,6 +529,53 @@ Design an application platform that allows multiple teams to deliver React exper
 - stale cached asset
 - authentication state diverges
 - independent releases create UI inconsistency
+
+### Reference Answer
+
+Assign the shell a deliberately small responsibility:
+
+```text
+Browser
+  ↓
+Application Shell
+  ├── Routing
+  ├── Authentication context
+  ├── Navigation and layout
+  ├── Error isolation
+  └── Observability context
+        ↓
+Independently deployed microfrontends
+```
+
+Each product team owns a vertical experience and its deployment. The shell should not absorb product business logic.
+
+Use route-based activation through a composition mechanism such as single-spa when runtime independence is required. For less independent teams, build-time composition may be simpler and safer.
+
+Publish microfrontend assets with immutable, content-addressed versions. The shell or deployment manifest selects a known version. Rollback changes that reference rather than overwriting an existing artifact.
+
+Keep shared dependencies minimal:
+
+- React runtime where compatible
+- design-system tokens and components
+- authentication client
+- telemetry contract
+
+Use explicit compatibility ranges and integration tests. Sharing every library creates coupling; bundling everything independently creates duplication and inconsistent runtime behavior.
+
+Authentication is owned centrally. The shell provides identity context through a stable interface, but individual services still enforce authorization. Frontend checks improve experience; they are not security boundaries.
+
+Testing layers:
+
+- component tests within each microfrontend
+- contract tests for shell integration
+- representative integration tests
+- a small number of critical Cypress end-to-end journeys
+
+Use error boundaries and loading timeouts so one microfrontend cannot blank the whole application. Record route, version, correlation identifier, errors, and web performance metrics.
+
+Primary trade-off:
+
+> Independent deployment reduces coordination cost, but it moves complexity into contracts, runtime compatibility, testing, and user-experience governance. Use microfrontends only where team and release independence justify that cost.
 
 ## Existing Designs to Rehearse
 

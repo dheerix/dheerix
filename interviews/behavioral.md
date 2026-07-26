@@ -79,6 +79,7 @@ Keep the initial answer between two and three minutes.
 ## Primary Evidence
 
 Use the [STAR Story Index](star-index.md) to select the correct example.
+Use [Behavioral Answer Bank](behavioral-answer-bank.md) for reference responses based on the currently documented evidence.
 
 Strong stories include:
 

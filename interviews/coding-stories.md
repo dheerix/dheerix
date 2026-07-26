@@ -163,6 +163,8 @@ Recognition signals:
 
 ## Focused Problem Set
 
+The concise solution approaches are in [Coding Answer Key](coding-answer-key.md). Do not open the key until the unaided attempt is complete.
+
 ### Foundation
 
 - Two Sum

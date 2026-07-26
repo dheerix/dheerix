@@ -41,6 +41,15 @@ Project explanation is already a relative strength. Most preparation time should
 - [Behavioral Interviews](behavioral.md)
 - [STAR Story Index](star-index.md)
 
+## Answer Banks
+
+- Technical answers are included beneath the question bank in [Technical Depth](technical-depth.md).
+- Reference architectures are included beneath each prompt in [System Design](system-design.md).
+- [Coding Answer Key](coding-answer-key.md) provides approaches, complexity, and common mistakes.
+- [Behavioral Answer Bank](behavioral-answer-bank.md) provides evidence-based senior-level reference answers.
+
+Attempt the exercise before opening its answer. The answer bank is for comparison and repair, not memorization.
+
 ## Existing Deep Technical Guides
 
 - [Marketplace Platform Interview Guide](../projects/marketplace/07-interview-guide.md)
